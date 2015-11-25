@@ -24,9 +24,22 @@ namespace Our.Umbraco.DocTypeGridEditor.Helpers
 
         public static IPublishedContent ConvertValueToContent(string id, string docTypeAlias, string dataJson)
         {
+            if (string.IsNullOrWhiteSpace(docTypeAlias))
+                return null;
+
+           if (UmbracoContext.Current != null)
+           {
             return (IPublishedContent)ApplicationContext.Current.ApplicationCache.RequestCache.GetCacheItem(
                 "DocTypeGridEditorHelper.ConvertValueToContent_" + id + "_" + docTypeAlias, () =>
                 {
+                   return ConvertValue(id, docTypeAlias, dataJson);
+                 });
+            }
+                return (IPublishedContent) ConvertValue(id, docTypeAlias, dataJson);
+        }
+
+        private static IPublishedContent ConvertValue(string id, string docTypeAlias, string dataJson)
+        {
                     using (var timer =  DisposableTimer.DebugDuration<DocTypeGridEditorHelper>(string.Format("ConvertValueToContent ({0}, {1})", id, docTypeAlias)))
                     {
                         Guid docTypeGuid;
@@ -64,7 +77,7 @@ namespace Our.Umbraco.DocTypeGridEditor.Helpers
                                 /* Now that we have the DB stored value, we actually need to then convert it into it's
                                  * XML serialized state as expected by the published property by calling ConvertDbToString
                                  */
-                                var propType2 = contentType.PropertyTypes.Single(x => x.Alias == propType.PropertyTypeAlias);
+                                var propType2 = contentType.CompositionPropertyTypes.Single(x => x.Alias == propType.PropertyTypeAlias);
                                 var newValue2 = propEditor.ValueEditor.ConvertDbToString(new Property(propType2, newValue), propType2, 
                                     ApplicationContext.Current.Services.DataTypeService);
 
@@ -80,7 +93,7 @@ namespace Our.Umbraco.DocTypeGridEditor.Helpers
                         }
 
                         // Get the current request node we are embedded in
-                        var pcr = UmbracoContext.Current.PublishedContentRequest;
+                        var pcr = UmbracoContext.Current == null ? null : UmbracoContext.Current.PublishedContentRequest;
                         var containerNode = pcr != null && pcr.HasPublishedContent ? pcr.PublishedContent : null;
 
                         return new DetachedPublishedContent(nameObj == null ? null : nameObj.ToString(), 
@@ -88,7 +101,7 @@ namespace Our.Umbraco.DocTypeGridEditor.Helpers
                             properties.ToArray(),
                             containerNode);
                     }
-                });
+
         }
     }
 }
